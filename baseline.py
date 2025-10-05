@@ -13,6 +13,7 @@ import pickle
 import os
 import sys
 import glob
+from Deployment.implement import file_load
 ########################################################################
 
 
@@ -377,6 +378,8 @@ if __name__ == "__main__":
     # load parameter yaml
     with open("baseline.yaml") as stream:
         param = yaml.safe_load(stream)
+    # with open("./results.yaml") as stream:
+    #     result_data = yaml.safe_load(stream)
 
     # make output directory
     os.makedirs(param["pickle_directory"], exist_ok=True)
@@ -491,14 +494,15 @@ if __name__ == "__main__":
             model.save_weights(model_file)
         # Evaluating threshold
         # print("============== EVALUATING THRESHOLD ==============")
+        ## This array is containing the reconstruction errors for all the training data
         train_errors = []
         for data_batch in numpy.array_split(train_data, 10):
             train_error = numpy.mean(numpy.square(data_batch - model.predict(data_batch)), axis=1)
             train_errors.extend(train_error)
 
         train_errors = numpy.array(train_errors)
-        error_min = numpy.min(train_errors)
-        error_max = numpy.max(train_errors)
+        threshold = numpy.percentile(train_errors, 99)
+
 
 
 
@@ -510,7 +514,8 @@ if __name__ == "__main__":
         print("============== EVALUATION ==============")
         y_pred = [0. for k in eval_labels]
         y_true = eval_labels
-        possible_thresholds = []
+        # possible_thresholds = []
+        percentile_array = []
         for num, file_name in tqdm(enumerate(eval_files), total=len(eval_files)):
             try:
                 data = file_to_vector_array(file_name,
@@ -520,18 +525,32 @@ if __name__ == "__main__":
                                             hop_length=param["feature"]["hop_length"],
                                             power=param["feature"]["power"])
                 error = numpy.mean(numpy.square(data - model.predict(data)), axis=1)
+
+                # result_data["results"].append(numpy.percentile(error, 99))
+                percentile_99 = numpy.percentile(error, 99)
+                # result_data["results"].append(percentile_99)
+
+                # Append to array
+                percentile_array.append(percentile_99)
+
+                # Append to file immediately
+                with open('data.txt', 'a') as data_file:
+                    data_file.write(f"{percentile_99:.6f},")
+                y_pred[num] = numpy.mean(error)
                 # normalized_error = (error - error_min) / (error_max - error_min + 1e-8)
-                possible_thresholds.append(numpy.mean(error))
+
             except:
                 logger.warning("File broken!!: {}".format(file_name))
 
 
-        threshold = numpy.percentile(possible_thresholds, 99)
+        # threshold = numpy.percentile(possible_thresholds, 99)
         score = metrics.roc_auc_score(y_true, y_pred)
         logger.info("AUC : {}".format(score))
         evaluation_result["AUC"] = float(score)
         evaluation_result["threshold"] = float(threshold)
         results[evaluation_result_key] = evaluation_result
+        # with open('./results.yaml', 'w') as file:
+        #     yaml.dump(result_data, file, default_flow_style=False)
         print("===========================")
 
     # output results

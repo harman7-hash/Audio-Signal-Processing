@@ -1,3 +1,5 @@
+#implement.py
+
 import os
 import sys
 import glob
@@ -122,6 +124,7 @@ def create_autoencoder_model(input_dim=INPUT_DIM):
     output_layer = Dense(input_dim, activation=None)(h)
     return Model(inputs=input_layer, outputs=output_layer)
 
+def getResult():
 
 if __name__ == "__main__":
     with open("../result/result.yaml") as stream:
@@ -143,13 +146,14 @@ if __name__ == "__main__":
 
     model = create_autoencoder_model()
     model.load_weights(MODEL_WEIGHTS_PATH)
-    files = ["D:\Programming\Python\Machine Learning\Audio Signal Processing\mimii_baseline\dataset\min6db\-6_dB_fan\\fan\id_00\\abnormal\\00000023.wav",
-             "D:\Programming\Python\Machine Learning\Audio Signal Processing\mimii_baseline\dataset\min6db\-6_dB_fan\\fan\id_00\\abnormal\\00000037.wav",
-             "D:\Programming\Python\Machine Learning\Audio Signal Processing\mimii_baseline\dataset\min6db\-6_dB_fan\\fan\id_00\\normal\\00000252.wav"]
+    files = ['E:\mimii_baseline\dataset\min6db\-6_dB_fan\\fan\id_00\\abnormal\\00000023.wav',
+             "E:\mimii_baseline\dataset\min6db\-6_dB_fan\\fan\id_00\\abnormal\\00000037.wav",
+             "E:\mimii_baseline\dataset\min6db\-6_dB_fan\\fan\id_00\\normal\\00000252.wav"]
     for file in files:
         audio_file = file
         # Example usage with a test WAV file
         test_files =file_to_vector_array(audio_file)
+        print(test_files.size)
 
         if test_files.size == 0:
             print("Could not extract features. The file might be too short or corrupted.")
@@ -157,7 +161,7 @@ if __name__ == "__main__":
 
         reconstructed_audio = model.predict(test_files)
         mse = numpy.mean(numpy.power(test_files - reconstructed_audio, 2), axis=1)
-        anomaly_score = numpy.mean(mse)
+        anomaly_score = numpy.percentile(mse, 99)
 
         print(f"Anomaly Score: {anomaly_score:.6f}")
         print(f"Threshold:     {threshold:.6f}")
