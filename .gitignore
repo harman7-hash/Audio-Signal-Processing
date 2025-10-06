@@ -4,4 +4,4 @@ model/
 result/
 pickle/
 server/.venv
-
+my-app/node_modules
