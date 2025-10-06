@@ -3,3 +3,5 @@ dataset/
 model/
 result/
 pickle/
+server/.venv
+
