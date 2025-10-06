@@ -374,50 +374,42 @@ const stopRecording = async () => {
                         {pred.error > pred.threshold ? '🚨' : '✅'}
                       </div>
                       <div className="result-title">
-                        <h3>Latest Detection</h3>
+                        <h3>{pred.error > pred.threshold ? 'ABNORMAL' : 'NORMAL'}</h3>
                         <span className={`status-badge ${pred.error > pred.threshold ? 'anomalous' : 'normal'}`}>
                           {pred.error > pred.threshold ? 'ABNORMAL' : 'NORMAL'}
                         </span>
                       </div>
-                      <div className="processing-time">
-                        <div className="label">Processing Time</div>
-                        <div className="value">{pred.processing_time_ms || 0}ms</div>
-                      </div>
+                      {pred.threshold > pred.error && (
+                        <div className="processing-time">
+                          <div className="label">Processing Time</div>
+                          <div className="value">{pred.processing_time_ms || 0}ms</div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="result-details">
-                      <div className="metric wide">
-                        <label>Confidence</label>
-                        <div className="metric-value">
-                          {(pred.confidence * 100).toFixed(1)}%
-                        </div>
-                      </div>
-                      <div className="metric">
-                        <label>Anomaly Score</label>
-                        <div className="metric-value">
-                          {(pred.error ?? pred.reconstruction_error)?.toFixed(6)}
-                        </div>
-                      </div>
                       <div className="metric">
                         <label>Threshold</label>
-                        <div className="metric-value">
-                          {pred.threshold?.toFixed(6)}
-                        </div>
+                        <div className="metric-value">{pred.threshold?.toFixed(6)}</div>
+                      </div>
+                      <div className="metric">
+                        <label>Error</label>
+                        <div className="metric-value">{pred.error?.toFixed(6)}</div>
                       </div>
                     </div>
 
                     <div className="feature-grid">
                       <div className="feature-card">
                         <div className="feature-label">Spectral Centroid</div>
-                        <div className="feature-value">2219 Hz</div>
+                        <div className="feature-value">{pred.spectral_centroid?.toFixed(2)} Hz</div>
                       </div>
                       <div className="feature-card">
                         <div className="feature-label">Zero Crossing Rate</div>
-                        <div className="feature-value">0.0777</div>
+                        <div className="feature-value">{pred.zero_crossing_rate?.toFixed(4)}</div>
                       </div>
                       <div className="feature-card">
                         <div className="feature-label">Energy</div>
-                        <div className="feature-value">18.6</div>
+                        <div className="feature-value">{pred.energy?.toFixed(4)}</div>
                       </div>
                       <div className="feature-card">
                         <div className="feature-label">MFCC Features</div>
