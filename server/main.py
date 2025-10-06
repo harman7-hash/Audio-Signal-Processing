@@ -103,7 +103,7 @@ async def predict_anomaly(file: UploadFile = File(...)):
         # Load audio using librosa
         audio_data, sr = librosa.load(audio_file, sr=None, mono=True)
         
-        # Extract features
+        # Extract features for model input
         features = extract_features(
             audio_data=audio_data,
             sr=sr,
@@ -130,19 +130,21 @@ async def predict_anomaly(file: UploadFile = File(...)):
         # Determine if anomalous based on threshold vs error
         threshold = 0.1  # default/model threshold; adjust as needed
         is_anomalous = avg_error > threshold
-        confidence = 1.0 / (1.0 + np.exp(-avg_error))  # Simple confidence score
         processing_time_ms = int((perf_counter() - t0) * 1000)
+
+        # Compute requested audio descriptors (aggregated means)
+        spectral_centroid = float(np.mean(librosa.feature.spectral_centroid(y=audio_data, sr=sr)))
+        zero_crossing_rate = float(np.mean(librosa.feature.zero_crossing_rate(y=audio_data)))
+        energy = float(np.mean(np.square(audio_data)))
         
+        # Return only the requested fields
         return {
-            "filename": file.filename,
-            "is_anomalous": bool(is_anomalous),
-            "confidence": float(confidence),
-            "reconstruction_error": float(avg_error),
-            "error": float(avg_error),
             "threshold": float(threshold),
-            "analysis_frames": int(features.shape[0]),
-            "sample_rate": int(sr),
-            "processing_time_ms": processing_time_ms
+            "error": float(avg_error),
+            "processing_time_ms": processing_time_ms,
+            "spectral_centroid": spectral_centroid,
+            "zero_crossing_rate": zero_crossing_rate,
+            "energy": energy
         }
         
     except Exception as e:
