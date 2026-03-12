@@ -1,4 +1,3 @@
-// frontend/src/App.js
 import React, { useState, useRef } from 'react';
 import './App.css';
 
@@ -9,8 +8,7 @@ function App() {
   const [predictions, setPredictions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  
-  // Recording states
+
   const [isRecording, setIsRecording] = useState(false);
   const [recordedAudio, setRecordedAudio] = useState(null);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -46,7 +44,6 @@ function App() {
     }
   };
 
-  // Recording Functions
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -81,7 +78,7 @@ function App() {
         setSelectedFile(null);
       };
 
-      mediaRecorderRef.current.start(1000); // Collect data every second
+      mediaRecorderRef.current.start(1000);
       setIsRecording(true);
       setRecordingTime(0);
 
@@ -95,7 +92,6 @@ function App() {
     }
   };
 
-// Helper: Convert AudioBuffer to WAV Blob
 const audioBufferToWav = (buffer, sampleRate = 44100) => {
   const numChannels = buffer.numberOfChannels;
   const samples = buffer.getChannelData(0);
@@ -103,7 +99,6 @@ const audioBufferToWav = (buffer, sampleRate = 44100) => {
   const wavBuffer = new ArrayBuffer(bufferLength);
   const view = new DataView(wavBuffer);
 
-  // RIFF header
   const writeString = (view, offset, str) => {
     for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
   };
@@ -123,7 +118,6 @@ const audioBufferToWav = (buffer, sampleRate = 44100) => {
   writeString(view, offset, 'data'); offset += 4;
   view.setUint32(offset, bufferLength - offset - 4, true); offset += 4;
 
-  // Write PCM samples
   for (let i = 0; i < samples.length; i++) {
     const s = Math.max(-1, Math.min(1, samples[i]));
     view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
@@ -133,7 +127,6 @@ const audioBufferToWav = (buffer, sampleRate = 44100) => {
   return new Blob([view], { type: 'audio/wav' });
 };
 
-// Updated stopRecording
 const stopRecording = async () => {
   if (mediaRecorderRef.current && isRecording) {
     mediaRecorderRef.current.stop();
@@ -141,7 +134,6 @@ const stopRecording = async () => {
     setIsRecording(false);
     clearInterval(recordingIntervalRef.current);
 
-    // Convert recorded audio to WAV
     const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
     const arrayBuffer = await audioBlob.arrayBuffer();
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -150,7 +142,7 @@ const stopRecording = async () => {
 
     const audioUrl = URL.createObjectURL(wavBlob);
     setRecordedAudio({
-      blob: wavBlob,       // now WAV
+      blob: wavBlob,
       url: audioUrl,
       name: `recording-${new Date().getTime()}.wav`
     });
@@ -165,7 +157,6 @@ const stopRecording = async () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Prediction Functions
   const sendToBackend = async (audioBlob, filename) => {
     const formData = new FormData();
     formData.append('file', audioBlob, filename);

@@ -1,5 +1,4 @@
-# main.py
-from fastapi import FastAPI, File, UploadFile, HTTPException  # pyright: ignore[reportMissingImports]
+from fastapi import FastAPI, File, UploadFile, HTTPException 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -8,25 +7,22 @@ import os
 from typing import List, Any
 from time import perf_counter
 import json
-# Initialize FastAPI app
+
 app = FastAPI(title="ML Model API", version="1.0.0")
 
-# CORS middleware to allow frontend connections
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # React dev server
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Load your ML model (defer heavy imports so the API can start without ML deps)
 try:
-    # Heavy imports only when attempting to load the model
-    from tensorflow.keras.models import load_model  # type: ignore
-    import pickle  # type: ignore
-    import numpy as np  # type: ignore
-    import librosa  # type: ignore
+    from tensorflow.keras.models import load_model  
+    import pickle  
+    import numpy as np  
+    import librosa
 
     model = load_model("model/anomaly_detector.h5")
     with open("model/scaler.pkl", "rb") as f:
@@ -37,11 +33,8 @@ except Exception as e:
     model = None
     scaler = None
 
-# Feature extraction function (from your baseline code)
 def extract_features(audio_data: Any, sr: int, n_mels: int = 64, frames: int = 5, 
                    n_fft: int = 1024, hop_length: int = 512, power: float = 2.0) -> Any:
-    """Extract features from audio data"""
-    # Calculate melspectrogram
     mel_spectrogram = librosa.feature.melspectrogram(
         y=audio_data,
         sr=sr,
@@ -51,16 +44,13 @@ def extract_features(audio_data: Any, sr: int, n_mels: int = 64, frames: int = 5
         power=power
     )
     
-    # Convert to log mel energy
     log_mel_spectrogram = 20.0 / power * np.log10(mel_spectrogram + np.finfo(float).eps)
     
-    # Calculate total vector size
     vectorarray_size = len(log_mel_spectrogram[0, :]) - frames + 1
     
     if vectorarray_size < 1:
         return np.empty((0, n_mels * frames), float)
     
-    # Generate feature vectors
     dims = n_mels * frames
     vectorarray = np.zeros((vectorarray_size, dims), float)
     for t in range(frames):
@@ -68,7 +58,6 @@ def extract_features(audio_data: Any, sr: int, n_mels: int = 64, frames: int = 5
     
     return vectorarray
 
-# API Routes
 @app.get("/")
 async def root():
     return {"message": "ML Model API is running", "status": "healthy"}
@@ -90,20 +79,16 @@ async def predict_anomaly(file: UploadFile = File(...)):
     if model is None or scaler is None:
         raise HTTPException(status_code=500, detail="Model not loaded")
     
-    # Validate file type
     if not file.content_type.startswith('audio/'):
         raise HTTPException(status_code=400, detail="File must be an audio file")
     
     try:
         t0 = perf_counter()
-        # Read audio file
         contents = await file.read()
         audio_file = io.BytesIO(contents)
         
-        # Load audio using librosa
         audio_data, sr = librosa.load(audio_file, sr=None, mono=True)
         
-        # Extract features for model input
         features = extract_features(
             audio_data=audio_data,
             sr=sr,
@@ -117,27 +102,21 @@ async def predict_anomaly(file: UploadFile = File(...)):
         if features.shape[0] == 0:
             raise HTTPException(status_code=400, detail="Audio file too short for analysis")
         
-        # Scale features
         features_scaled = scaler.transform(features)
         
-        # Make prediction
         predictions = model.predict(features_scaled)
         
-        # Calculate reconstruction error (for anomaly detection)
         reconstruction_error = np.mean(np.square(features_scaled - predictions), axis=1)
         avg_error = np.mean(reconstruction_error)
         
-        # Determine if anomalous based on threshold vs error
-        threshold = 0.1  # default/model threshold; adjust as needed
+        threshold = 0.1  
         is_anomalous = avg_error > threshold
         processing_time_ms = int((perf_counter() - t0) * 1000)
 
-        # Compute requested audio descriptors (aggregated means)
         spectral_centroid = float(np.mean(librosa.feature.spectral_centroid(y=audio_data, sr=sr)))
         zero_crossing_rate = float(np.mean(librosa.feature.zero_crossing_rate(y=audio_data)))
         energy = float(np.mean(np.square(audio_data)))
         
-        # Return only the requested fields
         return {
             "threshold": float(threshold),
             "error": float(avg_error),
@@ -159,7 +138,6 @@ async def batch_predict(files: List[UploadFile] = File(...)):
     
     for file in files:
         try:
-            # Reuse the single prediction logic
             result = await predict_anomaly(file)
             results.append(result)
         except Exception as e:
@@ -172,7 +150,6 @@ async def batch_predict(files: List[UploadFile] = File(...)):
     
     return {"results": results}
 
-# Serve static files for a simple frontend
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 if __name__ == "__main__":
